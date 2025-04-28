@@ -1,14 +1,30 @@
 "use client";
-// components/ArticleForm.jsx
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { getArticle, getAuthors, getCategories } from "@/lib/api";
+import { createArticle, getArticle, getAuthors, getCategories, updateArticle } from "@/lib/api";
+import {
+  Box,
+  Button,
+  Checkbox,
+  Chip,
+  Divider,
+  FormControl,
+  FormHelperText,
+  FormLabel,
+  Grid,
+  Input,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 const ClientTiptapEditor = dynamic(() => import("./ClientTiptapEditor"), {
   ssr: false,
-  loading: () => <div className="editor-input border rounded p-2 min-h-[200px]">Loading editor…</div>,
+  loading: () => <Box className="editor-input border rounded p-2 min-h-[200px]">Loading editor…</Box>,
 });
 
 export default function ArticleForm({ articleId }) {
@@ -17,6 +33,7 @@ export default function ArticleForm({ articleId }) {
     handleSubmit,
     reset,
     control,
+    watch,
     formState: { isSubmitting, errors },
   } = useForm({
     defaultValues: {
@@ -29,7 +46,7 @@ export default function ArticleForm({ articleId }) {
       articleType: "text",
       description: "",
       mediaUrl: "",
-      published: "",
+      publishDate: "",
       isFeatured: false,
       isDraft: false,
     },
@@ -39,6 +56,7 @@ export default function ArticleForm({ articleId }) {
   const [categories, setCategories] = useState([]);
   const [authors, setAuthors] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
+  const articleType = watch("articleType");
 
   useEffect(() => {
     async function load() {
@@ -51,11 +69,18 @@ export default function ArticleForm({ articleId }) {
           const artRes = await getArticle(articleId);
           const data = artRes.data;
           reset({
-            ...data,
+            title: data.title,
+            subtitle: data.subtitle || "",
             hero: data.articleImage || "",
+            authorId: data.author?._id || "",
+            categoryId: data.category?._id || "",
             tags: data.tags || [],
+            articleType: data.articleType || "text",
             description: data.description || "",
-            published: data.published ? new Date(data.published).toISOString().split("T")[0] : "",
+            mediaUrl: data.mediaUrl || "",
+            publishDate: data.publishDate ? new Date(data.publishDate).toISOString().slice(0, 16) : "",
+            isFeatured: data.isFeatured || false,
+            isDraft: data.isDraft || false,
           });
         }
       } catch (e) {
@@ -69,11 +94,16 @@ export default function ArticleForm({ articleId }) {
 
   const onSubmit = async (formData) => {
     try {
-      if (formData?.hero) {
-        formData.articleImage = formData.hero;
-      }
-      if (articleId) await updateArticle(articleId, formData);
-      else await createArticle(formData);
+      const payload = {
+        ...formData,
+        category: formData.categoryId,
+        author: formData.authorId,
+        articleImage: formData.hero,
+        publishDate: new Date(formData.publishDate).toISOString(),
+      };
+
+      if (articleId) await updateArticle(articleId, payload);
+      else await createArticle(payload);
       router.push("/cms/articles");
     } catch (e) {
       console.error(e);
@@ -81,69 +111,226 @@ export default function ArticleForm({ articleId }) {
   };
 
   if (loadingData) {
-    return <div className="p-6 text-center">Loading…</div>;
+    return (
+      <Box p={3} textAlign="center">
+        Loading…
+      </Box>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg space-y-8">
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{
+        maxWidth: "900px",
+        mx: "auto",
+        bgcolor: "background.paper",
+        p: 4,
+        borderRadius: 2,
+        boxShadow: 1,
+      }}
+    >
       {/* Basic Info Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-800">{articleId ? "Edit Article" : "Create Article"}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Stack spacing={4}>
+        <Typography variant="h5" component="h2" fontWeight="medium">
+          {articleId ? "Edit Article" : "Create Article"}
+        </Typography>
+
+        <Grid container spacing={3}>
           {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Title *</label>
-            <input
-              {...register("title", { required: "Title is required" })}
-              className={`input ${errors.title ? "border-red-500" : ""}`}
-              placeholder="Article title"
-            />
-            {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-          </div>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors.title}>
+              <FormLabel>Title *</FormLabel>
+              <TextField {...register("title", { required: "Title is required" })} placeholder="Article title" fullWidth />
+              {errors.title && <FormHelperText>{errors.title.message}</FormHelperText>}
+            </FormControl>
+          </Grid>
+
           {/* Subtitle */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Subtitle</label>
-            <input {...register("subtitle")} className="input" placeholder="Article subtitle" />
-          </div>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <FormLabel>Subtitle</FormLabel>
+              <TextField {...register("subtitle")} placeholder="Article subtitle" fullWidth />
+            </FormControl>
+          </Grid>
+
           {/* Hero Image */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">Hero Image URL</label>
-            <input {...register("hero")} className="input" placeholder="https://example.com/image.jpg" />
-          </div>
-        </div>
-      </section>
+          <Grid item xs={12}>
+            <FormControl fullWidth error={!!errors.hero}>
+              <FormLabel>Hero Image URL *</FormLabel>
+              <TextField
+                {...register("hero", { required: "Hero image is required" })}
+                placeholder="https://example.com/image.jpg"
+                fullWidth
+              />
+              {errors.hero && <FormHelperText>{errors.hero.message}</FormHelperText>}
+            </FormControl>
+          </Grid>
 
-      {/* Tags & Settings */}
-      <section className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Content *</label>
+          {/* Author */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors.authorId}>
+              <FormLabel>Author *</FormLabel>
+              <Select {...register("authorId", { required: "Author is required" })} defaultValue="">
+                <MenuItem value="" disabled>
+                  Select Author
+                </MenuItem>
+                {authors.map((author) => (
+                  <MenuItem key={author._id} value={author._id}>
+                    {author.authorName}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.authorId && <FormHelperText>{errors.authorId.message}</FormHelperText>}
+            </FormControl>
+          </Grid>
+
+          {/* Category */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors.categoryId}>
+              <FormLabel>Category *</FormLabel>
+              <Select {...register("categoryId", { required: "Category is required" })} defaultValue="">
+                <MenuItem value="" disabled>
+                  Select Category
+                </MenuItem>
+                {categories.map((category) => (
+                  <MenuItem key={category._id} value={category._id}>
+                    {category.categoryName}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.categoryId && <FormHelperText>{errors.categoryId.message}</FormHelperText>}
+            </FormControl>
+          </Grid>
+
+          {/* Article Type */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors.articleType}>
+              <FormLabel>Article Type *</FormLabel>
+              <Select {...register("articleType", { required: "Article type is required" })}>
+                <MenuItem value="text">Text</MenuItem>
+                <MenuItem value="video">Video</MenuItem>
+                <MenuItem value="audio">Audio</MenuItem>
+              </Select>
+              {errors.articleType && <FormHelperText>{errors.articleType.message}</FormHelperText>}
+            </FormControl>
+          </Grid>
+
+          {/* Publish Date */}
+          {/* <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors.publishDate}>
+              <FormLabel>Publish Date *</FormLabel>
+              <TextField
+                type="datetime-local"
+                {...register("publishDate", { required: "Publish date is required" })}
+                fullWidth
+              />
+              {errors.publishDate && <FormHelperText>{errors.publishDate.message}</FormHelperText>}
+            </FormControl>
+          </Grid> */}
+
+          {/* Status Flags */}
+          {/* <Grid item xs={12}>
+            <Stack direction="row" spacing={2}>
+              <FormControl>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Checkbox {...register("isFeatured")} />
+                  <FormLabel>Featured</FormLabel>
+                </Stack>
+              </FormControl>
+              <FormControl>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Checkbox {...register("isDraft")} />
+                  <FormLabel>Draft</FormLabel>
+                </Stack>
+              </FormControl>
+            </Stack>
+          </Grid> */}
+        </Grid>
+
+        <Divider />
+
+        {/* Content Section */}
+        <Stack spacing={3}>
+          {/* Media URL (conditionally shown for video/audio) */}
+          {articleType !== "text" && (
+            <FormControl fullWidth error={!!errors.mediaUrl}>
+              <FormLabel>{articleType === "video" ? "Video URL" : "Audio URL"} *</FormLabel>
+              <TextField
+                {...register("mediaUrl", { required: articleType !== "text" ? `${articleType} URL is required` : false })}
+                placeholder={`https://example.com/${articleType}.mp4`}
+                fullWidth
+              />
+              {errors.mediaUrl && <FormHelperText>{errors.mediaUrl.message}</FormHelperText>}
+            </FormControl>
+          )}
+
+          {/* Description (conditionally shown for text) */}
+          {articleType === "text" && (
+            <FormControl fullWidth error={!!errors.description}>
+              <FormLabel>Content *</FormLabel>
+              <Controller
+                name="description"
+                control={control}
+                rules={{ required: "Content is required" }}
+                render={({ field }) => <ClientTiptapEditor value={field.value} onChange={field.onChange} />}
+              />
+              {errors.description && <FormHelperText>{errors.description.message}</FormHelperText>}
+            </FormControl>
+          )}
+        </Stack>
+
+        <Divider />
+
+        {/* Tags Section */}
+        <FormControl fullWidth>
+          <FormLabel>Tags</FormLabel>
           <Controller
-            name="description"
+            name="tags"
             control={control}
-            rules={{ required: "Content is required" }}
-            render={({ field }) => <ClientTiptapEditor value={field.value} onChange={field.onChange} />}
+            render={({ field }) => (
+              <Stack spacing={1}>
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {field.value.map((tag, index) => (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      onDelete={() => {
+                        const newTags = [...field.value];
+                        newTags.splice(index, 1);
+                        field.onChange(newTags);
+                      }}
+                    />
+                  ))}
+                </Stack>
+                <TextField
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.target.value.trim()) {
+                      e.preventDefault();
+                      field.onChange([...field.value, e.target.value.trim()]);
+                      e.target.value = "";
+                    }
+                  }}
+                  placeholder="Add tag and press Enter"
+                  fullWidth
+                />
+              </Stack>
+            )}
           />
-          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-        </div>
-      </section>
+        </FormControl>
 
-      {/* Actions */}
-      <div className="flex justify-end space-x-4 pt-4">
-        <button
-          type="button"
-          onClick={() => router.push("/cms/articles")}
-          className="px-6 py-2 border rounded-lg hover:bg-gray-50 transition"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-        >
-          {isSubmitting ? "Saving…" : articleId ? "Update Article" : "Create Article"}
-        </button>
-      </div>
-    </form>
+        {/* Actions */}
+        <Stack direction="row" justifyContent="flex-end" spacing={2} pt={2}>
+          <Button type="button" onClick={() => router.push("/cms/articles")} variant="outlined" sx={{ minWidth: 120 }}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} variant="contained" sx={{ minWidth: 120 }}>
+            {isSubmitting ? "Saving…" : articleId ? "Update Article" : "Create Article"}
+          </Button>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }
