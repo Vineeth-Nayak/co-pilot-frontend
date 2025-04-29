@@ -37,7 +37,7 @@ export default async function AuthorsPage() {
           <Grid item xs={12} sm={6} md={4} key={author.authorId}>
             <Card
               sx={{
-                height: 225,
+                height: "auto",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",

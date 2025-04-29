@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { createAuthor, updateAuthor, getAuthor } from "@/lib/api";
 import { useEffect, useState } from "react";
-import { Box, Button, FormControl, FormHelperText, Stack, TextField, Typography, Grid, Avatar } from "@mui/material";
+import { Box, Button, FormControl, FormHelperText, Stack, TextField, Typography, Avatar } from "@mui/material";
 
 export default function AuthorForm({ authorId }) {
   const {
@@ -57,7 +57,7 @@ export default function AuthorForm({ authorId }) {
       component="form"
       onSubmit={handleSubmit(onSubmit)}
       sx={{
-        maxWidth: "800px",
+        maxWidth: "600px",
         mx: "auto",
         bgcolor: "background.paper",
         p: 4,
@@ -66,58 +66,44 @@ export default function AuthorForm({ authorId }) {
       }}
     >
       <Stack spacing={3}>
-        <Typography variant="h5" component="h2" fontWeight="medium">
+        <Typography variant="h5" component="h2" fontWeight="medium" textAlign="center">
           {mode ? "Edit Author" : "Create Author"}
         </Typography>
 
-        <Grid container spacing={3}>
-          {/* Profile Image Preview */}
-          <Grid item xs={12} sx={{ textAlign: "center" }}>
-            <Avatar src={authorImage || "/default-avatar.jpg"} alt="Author" sx={{ width: 120, height: 120, mx: "auto" }} />
-          </Grid>
+        {/* Profile Image Preview */}
+        <Box textAlign="center">
+          <Avatar src={authorImage || "/default-avatar.jpg"} alt="Author" sx={{ width: 120, height: 120, mx: "auto" }} />
+        </Box>
 
-          {/* Author Name */}
-          <Grid item xs={12}>
-            <FormControl fullWidth error={!!errors.authorName}>
-              <TextField
-                label="Author Name *"
-                variant="outlined"
-                placeholder="Enter author name"
-                fullWidth
-                {...register("authorName", { required: "Author name is required" })}
-              />
-              {errors.authorName && <FormHelperText>{errors.authorName.message}</FormHelperText>}
-            </FormControl>
-          </Grid>
+        {/* Author Name */}
+        <FormControl fullWidth error={!!errors.authorName}>
+          <TextField
+            label="Author Name *"
+            variant="outlined"
+            placeholder="Enter author name"
+            fullWidth
+            {...register("authorName", { required: "Author name is required" })}
+          />
+          {errors.authorName && <FormHelperText>{errors.authorName.message}</FormHelperText>}
+        </FormControl>
 
-          {/* Author Image URL */}
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <TextField
-                label="Image URL"
-                variant="outlined"
-                placeholder="Enter image URL"
-                fullWidth
-                {...register("authorImage")}
-              />
-            </FormControl>
-          </Grid>
+        {/* Author Image URL */}
+        <FormControl fullWidth>
+          <TextField label="Image URL" variant="outlined" placeholder="Enter image URL" fullWidth {...register("authorImage")} />
+        </FormControl>
 
-          {/* Description */}
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <TextField
-                label="Description"
-                variant="outlined"
-                multiline
-                minRows={4}
-                placeholder="Enter description"
-                fullWidth
-                {...register("description")}
-              />
-            </FormControl>
-          </Grid>
-        </Grid>
+        {/* Description */}
+        <FormControl fullWidth>
+          <TextField
+            label="Description"
+            variant="outlined"
+            multiline
+            minRows={4}
+            placeholder="Enter description"
+            fullWidth
+            {...register("description")}
+          />
+        </FormControl>
 
         {/* Submit Buttons */}
         <Stack direction="row" justifyContent="flex-start" spacing={2} pt={2}>
