@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import CmsNav from "@/components/CmsNav";
+import Footer from "@/components/Footer";
 
 export default function CmsLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,6 +30,9 @@ export default function CmsLayout({ children }) {
         <main className="p-6">
           <div className="bg-white rounded-xl shadow-sm p-6">{children}</div>
         </main>
+
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   );

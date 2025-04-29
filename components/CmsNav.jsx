@@ -36,10 +36,6 @@ export default function CmsNav() {
           </li>
         ))}
       </ul>
-
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500">v2.4.0</div>
-      </div>
     </nav>
   );
 }
