@@ -1,14 +1,35 @@
+"use client";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-
-export const metadata = { title: "Vineeth News CMS" };
+import CmsNav from "@/components/CmsNav";
 
 export default function CmsLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <main className="flex-1 bg-gray-50 p-6">{children}</main>
-      <Footer />
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-20 bg-black bg-opacity-50 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 z-30 w-64 transform ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 transition-transform duration-200 ease-in-out bg-white border-r border-gray-200`}
+      >
+        <CmsNav />
+      </div>
+
+      {/* Main content */}
+      <div className="md:pl-64">
+        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+
+        <main className="p-6">
+          <div className="bg-white rounded-xl shadow-sm p-6">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
