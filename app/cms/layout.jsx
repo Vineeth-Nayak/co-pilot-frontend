@@ -1,13 +1,14 @@
-import CmsNav from "@/components/CmsNav";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
-export const metadata = { title: "CMS" };
+export const metadata = { title: "Vineeth News CMS" };
+
 export default function CmsLayout({ children }) {
   return (
-    <div className="flex">
-      <aside className="w-1/6">
-        <CmsNav />
-      </aside>
-      <main className="flex-1 p-6">{children}</main>
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-1 bg-gray-50 p-6">{children}</main>
+      <Footer />
     </div>
   );
 }
