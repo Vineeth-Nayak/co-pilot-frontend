@@ -33,6 +33,7 @@ export default function ClientTiptapEditor({ value, onChange }) {
   const [editorContent, setEditorContent] = useState(value);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         history: false,
@@ -47,6 +48,7 @@ export default function ClientTiptapEditor({ value, onChange }) {
       FontSize.configure({
         types: ["textStyle"],
       }),
+      ,
     ],
     content: editorContent,
     editorProps: {

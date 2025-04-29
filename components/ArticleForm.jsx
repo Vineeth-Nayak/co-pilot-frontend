@@ -3,17 +3,14 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { createArticle, getArticle, getAuthors, getCategories, updateArticle } from "@/lib/api";
 import {
   Box,
   Button,
-  Checkbox,
   Chip,
   Divider,
   FormControl,
   FormHelperText,
   FormLabel,
-  Grid,
   Input,
   MenuItem,
   Select,
@@ -21,6 +18,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { createArticle, getArticle, getAuthors, getCategories, updateArticle } from "@/lib/api";
 
 const ClientTiptapEditor = dynamic(() => import("./ClientTiptapEditor"), {
   ssr: false,
@@ -34,6 +32,8 @@ export default function ArticleForm({ articleId }) {
     reset,
     control,
     watch,
+    setValue,
+    getValues,
     formState: { isSubmitting, errors },
   } = useForm({
     defaultValues: {
@@ -46,9 +46,6 @@ export default function ArticleForm({ articleId }) {
       articleType: "text",
       description: "",
       mediaUrl: "",
-      publishDate: "",
-      isFeatured: false,
-      isDraft: false,
     },
   });
 
@@ -57,6 +54,7 @@ export default function ArticleForm({ articleId }) {
   const [authors, setAuthors] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const articleType = watch("articleType");
+  const heroImageUrl = watch("hero");
 
   useEffect(() => {
     async function load() {
@@ -78,9 +76,6 @@ export default function ArticleForm({ articleId }) {
             articleType: data.articleType || "text",
             description: data.description || "",
             mediaUrl: data.mediaUrl || "",
-            publishDate: data.publishDate ? new Date(data.publishDate).toISOString().slice(0, 16) : "",
-            isFeatured: data.isFeatured || false,
-            isDraft: data.isDraft || false,
           });
         }
       } catch (e) {
@@ -99,7 +94,6 @@ export default function ArticleForm({ articleId }) {
         category: formData.categoryId,
         author: formData.authorId,
         articleImage: formData.hero,
-        publishDate: new Date(formData.publishDate).toISOString(),
       };
 
       if (articleId) await updateArticle(articleId, payload);
@@ -108,6 +102,23 @@ export default function ArticleForm({ articleId }) {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleAddTag = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const newTag = e.target.value.trim();
+      if (newTag && !getValues("tags").includes(newTag)) {
+        const updatedTags = [...getValues("tags"), newTag];
+        setValue("tags", updatedTags);
+        e.target.value = "";
+      }
+    }
+  };
+
+  const handleDeleteTag = (tagToDelete) => {
+    const updatedTags = getValues("tags").filter((tag) => tag !== tagToDelete);
+    setValue("tags", updatedTags);
   };
 
   if (loadingData) {
@@ -123,7 +134,7 @@ export default function ArticleForm({ articleId }) {
       component="form"
       onSubmit={handleSubmit(onSubmit)}
       sx={{
-        maxWidth: "900px",
+        maxWidth: "800px",
         mx: "auto",
         bgcolor: "background.paper",
         p: 4,
@@ -131,48 +142,45 @@ export default function ArticleForm({ articleId }) {
         boxShadow: 1,
       }}
     >
-      {/* Basic Info Section */}
       <Stack spacing={4}>
         <Typography variant="h5" component="h2" fontWeight="medium">
           {articleId ? "Edit Article" : "Create Article"}
         </Typography>
 
-        <Grid container spacing={3}>
-          {/* Title */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth error={!!errors.title}>
-              <FormLabel>Title *</FormLabel>
-              <TextField {...register("title", { required: "Title is required" })} placeholder="Article title" fullWidth />
-              {errors.title && <FormHelperText>{errors.title.message}</FormHelperText>}
-            </FormControl>
-          </Grid>
+        <FormControl fullWidth error={!!errors.title}>
+          <FormLabel>Title *</FormLabel>
+          <TextField variant="outlined" {...register("title", { required: "Title is required" })} placeholder="Article title" />
+          {errors.title && <FormHelperText>{errors.title.message}</FormHelperText>}
+        </FormControl>
 
-          {/* Subtitle */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <FormLabel>Subtitle</FormLabel>
-              <TextField {...register("subtitle")} placeholder="Article subtitle" fullWidth />
-            </FormControl>
-          </Grid>
+        <FormControl fullWidth>
+          <FormLabel>Subtitle</FormLabel>
+          <TextField variant="outlined" {...register("subtitle")} placeholder="Subtitle" />
+        </FormControl>
 
-          {/* Hero Image */}
-          <Grid item xs={12}>
-            <FormControl fullWidth error={!!errors.hero}>
-              <FormLabel>Hero Image URL *</FormLabel>
-              <TextField
-                {...register("hero", { required: "Hero image is required" })}
-                placeholder="https://example.com/image.jpg"
-                fullWidth
-              />
-              {errors.hero && <FormHelperText>{errors.hero.message}</FormHelperText>}
-            </FormControl>
-          </Grid>
+        <FormControl fullWidth error={!!errors.hero}>
+          <FormLabel>Hero Image URL *</FormLabel>
+          <TextField
+            variant="outlined"
+            {...register("hero", { required: "Hero image is required" })}
+            placeholder="https://example.com/image.jpg"
+          />
+          {errors.hero && <FormHelperText>{errors.hero.message}</FormHelperText>}
+          {heroImageUrl && (
+            <Box mt={2}>
+              <img src={heroImageUrl} alt="Hero Preview" style={{ width: "100%", borderRadius: 8 }} />
+            </Box>
+          )}
+        </FormControl>
 
-          {/* Author */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth error={!!errors.authorId}>
-              <FormLabel>Author *</FormLabel>
-              <Select {...register("authorId", { required: "Author is required" })} defaultValue="">
+        <FormControl fullWidth error={!!errors.authorId}>
+          <FormLabel>Author *</FormLabel>
+          <Controller
+            control={control}
+            name="authorId"
+            rules={{ required: "Author is required" }}
+            render={({ field }) => (
+              <Select {...field} variant="outlined" displayEmpty>
                 <MenuItem value="" disabled>
                   Select Author
                 </MenuItem>
@@ -182,15 +190,19 @@ export default function ArticleForm({ articleId }) {
                   </MenuItem>
                 ))}
               </Select>
-              {errors.authorId && <FormHelperText>{errors.authorId.message}</FormHelperText>}
-            </FormControl>
-          </Grid>
+            )}
+          />
+          {errors.authorId && <FormHelperText>{errors.authorId.message}</FormHelperText>}
+        </FormControl>
 
-          {/* Category */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth error={!!errors.categoryId}>
-              <FormLabel>Category *</FormLabel>
-              <Select {...register("categoryId", { required: "Category is required" })} defaultValue="">
+        <FormControl fullWidth error={!!errors.categoryId}>
+          <FormLabel>Category *</FormLabel>
+          <Controller
+            control={control}
+            name="categoryId"
+            rules={{ required: "Category is required" }}
+            render={({ field }) => (
+              <Select {...field} variant="outlined" displayEmpty>
                 <MenuItem value="" disabled>
                   Select Category
                 </MenuItem>
@@ -200,136 +212,64 @@ export default function ArticleForm({ articleId }) {
                   </MenuItem>
                 ))}
               </Select>
-              {errors.categoryId && <FormHelperText>{errors.categoryId.message}</FormHelperText>}
-            </FormControl>
-          </Grid>
+            )}
+          />
+          {errors.categoryId && <FormHelperText>{errors.categoryId.message}</FormHelperText>}
+        </FormControl>
 
-          {/* Article Type */}
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth error={!!errors.articleType}>
-              <FormLabel>Article Type *</FormLabel>
-              <Select {...register("articleType", { required: "Article type is required" })}>
+        <FormControl fullWidth>
+          <FormLabel>Tags</FormLabel>
+          <Input placeholder="Type tag and press Enter" onKeyDown={handleAddTag} fullWidth />
+          <Box mt={1} display="flex" gap={1} flexWrap="wrap">
+            {watch("tags").map((tag) => (
+              <Chip key={tag} label={tag} onDelete={() => handleDeleteTag(tag)} />
+            ))}
+          </Box>
+        </FormControl>
+
+        <FormControl fullWidth error={!!errors.articleType}>
+          <FormLabel>Article Type *</FormLabel>
+          <Controller
+            control={control}
+            name="articleType"
+            rules={{ required: "Article type is required" }}
+            render={({ field }) => (
+              <Select {...field} variant="outlined">
                 <MenuItem value="text">Text</MenuItem>
                 <MenuItem value="video">Video</MenuItem>
                 <MenuItem value="audio">Audio</MenuItem>
               </Select>
-              {errors.articleType && <FormHelperText>{errors.articleType.message}</FormHelperText>}
-            </FormControl>
-          </Grid>
-
-          {/* Publish Date */}
-          {/* <Grid item xs={12} md={6}>
-            <FormControl fullWidth error={!!errors.publishDate}>
-              <FormLabel>Publish Date *</FormLabel>
-              <TextField
-                type="datetime-local"
-                {...register("publishDate", { required: "Publish date is required" })}
-                fullWidth
-              />
-              {errors.publishDate && <FormHelperText>{errors.publishDate.message}</FormHelperText>}
-            </FormControl>
-          </Grid> */}
-
-          {/* Status Flags */}
-          {/* <Grid item xs={12}>
-            <Stack direction="row" spacing={2}>
-              <FormControl>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Checkbox {...register("isFeatured")} />
-                  <FormLabel>Featured</FormLabel>
-                </Stack>
-              </FormControl>
-              <FormControl>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Checkbox {...register("isDraft")} />
-                  <FormLabel>Draft</FormLabel>
-                </Stack>
-              </FormControl>
-            </Stack>
-          </Grid> */}
-        </Grid>
-
-        <Divider />
-
-        {/* Content Section */}
-        <Stack spacing={3}>
-          {/* Media URL (conditionally shown for video/audio) */}
-          {articleType !== "text" && (
-            <FormControl fullWidth error={!!errors.mediaUrl}>
-              <FormLabel>{articleType === "video" ? "Video URL" : "Audio URL"} *</FormLabel>
-              <TextField
-                {...register("mediaUrl", { required: articleType !== "text" ? `${articleType} URL is required` : false })}
-                placeholder={`https://example.com/${articleType}.mp4`}
-                fullWidth
-              />
-              {errors.mediaUrl && <FormHelperText>{errors.mediaUrl.message}</FormHelperText>}
-            </FormControl>
-          )}
-
-          {/* Description (conditionally shown for text) */}
-          {articleType === "text" && (
-            <FormControl fullWidth error={!!errors.description}>
-              <FormLabel>Content *</FormLabel>
-              <Controller
-                name="description"
-                control={control}
-                rules={{ required: "Content is required" }}
-                render={({ field }) => <ClientTiptapEditor value={field.value} onChange={field.onChange} />}
-              />
-              {errors.description && <FormHelperText>{errors.description.message}</FormHelperText>}
-            </FormControl>
-          )}
-        </Stack>
-
-        <Divider />
-
-        {/* Tags Section */}
-        <FormControl fullWidth>
-          <FormLabel>Tags</FormLabel>
-          <Controller
-            name="tags"
-            control={control}
-            render={({ field }) => (
-              <Stack spacing={1}>
-                <Stack direction="row" flexWrap="wrap" gap={1}>
-                  {field.value.map((tag, index) => (
-                    <Chip
-                      key={index}
-                      label={tag}
-                      onDelete={() => {
-                        const newTags = [...field.value];
-                        newTags.splice(index, 1);
-                        field.onChange(newTags);
-                      }}
-                    />
-                  ))}
-                </Stack>
-                <TextField
-                  type="text"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && e.target.value.trim()) {
-                      e.preventDefault();
-                      field.onChange([...field.value, e.target.value.trim()]);
-                      e.target.value = "";
-                    }
-                  }}
-                  placeholder="Add tag and press Enter"
-                  fullWidth
-                />
-              </Stack>
             )}
           />
+          {errors.articleType && <FormHelperText>{errors.articleType.message}</FormHelperText>}
         </FormControl>
 
-        {/* Actions */}
-        <Stack direction="row" justifyContent="flex-end" spacing={2} pt={2}>
-          <Button type="button" onClick={() => router.push("/cms/articles")} variant="outlined" sx={{ minWidth: 120 }}>
-            Cancel
+        {articleType === "text" ? (
+          <FormControl fullWidth>
+            <FormLabel>Description</FormLabel>
+            <Controller name="description" control={control} render={({ field }) => <ClientTiptapEditor {...field} />} />
+          </FormControl>
+        ) : (
+          <FormControl fullWidth error={!!errors.mediaUrl}>
+            <FormLabel>Media URL *</FormLabel>
+            <TextField
+              variant="outlined"
+              {...register("mediaUrl", {
+                required: "Media URL is required",
+              })}
+              placeholder="https://example.com/media.mp4"
+            />
+            {errors.mediaUrl && <FormHelperText>{errors.mediaUrl.message}</FormHelperText>}
+          </FormControl>
+        )}
+
+        <Divider />
+
+        <Box textAlign="right">
+          <Button variant="contained" type="submit" disabled={isSubmitting}>
+            {articleId ? "Update Article" : "Create Article"}
           </Button>
-          <Button type="submit" disabled={isSubmitting} variant="contained" sx={{ minWidth: 120 }}>
-            {isSubmitting ? "Saving…" : articleId ? "Update Article" : "Create Article"}
-          </Button>
-        </Stack>
+        </Box>
       </Stack>
     </Box>
   );
