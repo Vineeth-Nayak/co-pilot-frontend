@@ -46,9 +46,24 @@ export default function ArticleList() {
       if (filters.tag) params.append("tag", filters.tag);
       if (filters.articleType) params.append("articleType", filters.articleType);
 
-      const res = await fetch(`http://localhost:5000/api/articles?${params.toString()}`);
+      let url = "";
+
+      // if params are empty remove '?' from the URL
+      if (!params.toString()) {
+        url = "http://localhost:5000/api/articles";
+      } else {
+        url = `http://localhost:5000/api/articles?${params.toString()}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
-      setArticles(data.data.articles);
+
+      // only set articles if the response is successful
+      if (data.status === 1) {
+        setArticles(data.data.articles);
+      } else {
+        setArticles([]);
+      }
+      // setArticles(data.data.articles);
     } catch (error) {
       console.error("Error fetching articles:", error);
     } finally {

@@ -1,5 +1,6 @@
 "use client";
-import { useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { Box, CircularProgress } from "@mui/material";
@@ -7,14 +8,19 @@ import { Box, CircularProgress } from "@mui/material";
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !loading && !user) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, loading, hasMounted, router]);
 
-  if (loading || !user) {
+  if (!hasMounted || loading || !user) {
     return (
       <Box height="80vh" display="flex" justifyContent="center" alignItems="center">
         <CircularProgress size={48} color="primary" />
